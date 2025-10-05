@@ -1,134 +1,76 @@
 name: Build APK
-
 on: [push]
-
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
-        
     - name: Create project structure
       run: |
         mkdir -p app/src/main/java/com/example/app
         mkdir -p gradle/wrapper
-
-    - name: Create build.gradle
-      run: |
-        echo 'buildscript {
-    repositories { 
-        google() 
-        mavenCentral() 
-    }
-    dependencies { 
-        classpath "com.android.tools.build:gradle:8.1.4" 
-    }
-}
-
-allprojects {
-    repositories { 
-        google() 
-        mavenCentral() 
-    }
-}
-
-task clean(type: Delete) {
-    delete rootProject.buildDir
-}' > build.gradle
-
-    - name: Create app build.gradle
-      run: |
-        echo 'plugins {
-    id "com.android.application"
-}
-
-android {
-    compileSdk 34
-    namespace "com.example.app"
-    
-    defaultConfig {
-        applicationId "com.example.app"
-        minSdk 21
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
-    }
-    
-    buildTypes {
-        debug {
-            debuggable true
-        }
-    }
-}
-
-dependencies {
-    implementation "androidx.appcompat:appcompat:1.6.1"
-}' > app/build.gradle
-
-    - name: Create AndroidManifest
-      run: |
-        echo '<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.app">
-
-    <application
-        android:label="My App">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-    </application>
-</manifest>' > app/src/main/AndroidManifest.xml
-
-    - name: Create MainActivity
-      run: |
-        echo 'package com.example.app;
-
-import android.os.Bundle;
-import android.widget.TextView;
-import androidx.appcompat.app.AppCompatActivity;
-
-public class MainActivity extends AppCompatActivity {
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        TextView textView = new TextView(this);
-        textView.setText("Привет! Работает!");
-        textView.setTextSize(32);
-        setContentView(textView);
-    }
-}' > app/src/main/java/com/example/app/MainActivity.java
-
-    - name: Create settings.gradle
-      run: |
-        echo 'include ":app"' > settings.gradle
-
-    - name: Create gradle wrapper
-      run: |
-        echo 'distributionBase=GRADLE_USER_HOME
-distributionPath=wrapper/dists
-distributionUrl=https://services.gradle.org/distributions/gradle-8.4-bin.zip
-zipStoreBase=GRADLE_USER_HOME
-zipStorePath=wrapper/dists' > gradle/wrapper/gradle-wrapper.properties
-
-    - name: Build APK
+    - name: Download Gradle
       run: |
         wget -q https://github.com/gradle/gradle/releases/download/v8.4/gradle-8.4-bin.zip
         unzip -q gradle-8.4-bin.zip
-        ./gradle-8.4/bin/gradle assembleDebug --no-daemon
+    - name: Create simple app
+      run: |
+        # Создаем минимальный Android проект
+        echo 'buildscript {
+  repositories { google(); mavenCentral() }
+  dependencies { classpath "com.android.tools.build:gradle:4.2.2" }
+}
+allprojects { repositories { google(); mavenCentral() } }' > build.gradle
         
+        echo 'plugins { id "com.android.application" }
+android {
+  compileSdk 30
+  defaultConfig {
+    applicationId "com.example.app"
+    minSdk 21
+    targetSdk 30
+    versionCode 1
+    versionName "1.0"
+  }
+  buildTypes { debug { debuggable true } }
+}
+dependencies { implementation "androidx.appcompat:appcompat:1.3.1" }' > app/build.gradle
+        
+        echo '<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application android:label="My App">
+    <activity android:name=".MainActivity" android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>' > app/src/main/AndroidManifest.xml
+        
+        echo 'package com.example.app;
+import android.app.Activity;
+import android.os.Bundle;
+import android.widget.TextView;
+public class MainActivity extends Activity {
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    TextView tv = new TextView(this);
+    tv.setText("Привет мир!");
+    setContentView(tv);
+  }
+}' > app/src/main/java/com/example/app/MainActivity.java
+        
+        echo 'include ":app"' > settings.gradle
+    - name: Build APK
+      run: |
+        ./gradle-8.4/bin/gradle assembleDebug --no-daemon
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
